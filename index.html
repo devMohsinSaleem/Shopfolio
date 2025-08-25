@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D ID Card Viewer</title>
+    <style>
+        html,
+        body {
+            background: #000;
+        }
+        * {
+            box-sizing: border-box;
+        }
+
+        .container {
+            display: grid;
+            height: 95vh;
+            grid-template-columns: 2fr 3fr;
+            border: 1px solid limegreen;
+        }
+
+        #left-panel {
+            flex: 1 1 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            min-height: 0;
+            position: relative;
+            border-right: 1px solid limegreen;
+            overflow: hidden;
+        }
+        
+        #viewer {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .note {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            z-index: 10;
+            font-family: sans-serif;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 6px 12px;
+            border-radius: 4px;
+        }
+
+        #right-panel {
+            flex: 1 1 0;
+            background: #181818;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .navbar {
+            display: flex;
+            gap: 10px;
+            padding: 0 24px;
+            height: 60px;
+            align-items: center;
+        }
+
+        .navbar button {
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            height: 100%;
+            width: fit-content;
+        }
+
+        .navbar button:hover,
+        .navbar button.active {
+            border-bottom: 2px solid limegreen;
+        }
+        .content-area {
+            flex: 1 1 0;
+            padding: 32px;
+            color: #fff;
+            font-family: sans-serif;
+            overflow-y: auto;
+        }
+
+        .content-area>div {
+            display: none;
+        }
+
+        .content-area>.active {
+            display: block;
+        }
+        h1, h2{
+            color: #fff;
+            text-shadow: 0px 0px 12px #fff;
+        }
+        p, h3, h4, h5, h6, span, strong, a, button{
+            color: limegreen;
+            letter-spacing: 2px;
+            line-height: 150%;
+        }
+        li{
+            text-decoration: none;
+        }
+        .keyword-list{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 0;
+        }
+        .keyword{
+            list-style: none;
+        }
+        .search input{
+            width:100%;
+            font-size:1.1rem;
+            padding:8px 12px;
+            border-radius:4px;
+            border: none;
+            border-bottom:1px solid limegreen;
+            background:#222;
+            color:limegreen;
+            outline:none;
+            width: 100%;
+            max-width: 250px;
+        }
+        .ask-results {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            position: relative;
+        }
+        .ask-results.visible {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .ask-results > div {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .ask-results > div.active {
+            visibility: visible;
+            opacity: 1;
+            position: static;
+            pointer-events: auto;
+        }
+        .ask-results ul{
+            display: flex;
+            flex-direction: column;
+            row-gap: 5px;
+        }
+        .inline-flex{
+            display: flex;
+            border-bottom: 1px solid limegreen
+        }
+        .space-between{
+            justify-content: space-between;
+        }
+
+        .pd-layout{
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .pd-project-layout{
+            height: 100%;
+            background: rgba(62, 62, 62, 0.4);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border-radius: 14px;
+            border: 1px solid rgba(98, 98, 98, 0.3);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(146, 146, 146, 0.5),
+                inset 0 -1px 0 rgba(143, 143, 143, 0.1),
+                inset 0 0 4px 2px rgba(143, 143, 143, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .pd-project-layout::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.8),
+                transparent
+            );
+            }
+
+        .pd-project-layout::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: 100%;
+            background: linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.8),
+                transparent,
+                rgba(255, 255, 255, 0.3)
+            );
+        }
+        .pd-project{
+            display: block;
+            height: 100%;
+            text-decoration: none;
+        }
+        .pd-project img{
+            object-fit: contain;
+        }
+        .pd-project h2{
+            margin: 0;
+        }
+        @media only screen and (max-width: 749px){
+            .container{
+                grid-template-columns: 1fr;
+            }
+            #viewer {
+                height: 30vh;
+                min-height: 0;
+            }
+            .pd-layout{
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.153.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.153.0/examples/jsm/"
+        }
+    }
+</script>
+
+<body>
+    <div class="container">
+        <div id="left-panel">
+            <div id="viewer">
+                <div class="note">Drag to rotate, scroll to zoom</div>
+            </div>
+        </div>
+        <div id="right-panel">
+            <nav class="navbar">
+                <button id="nav-home" class="active">Home</button>
+                <button id="nav-about">About</button>
+                <button id="nav-projects">Projects</button>
+            </nav>
+            <div class="content-area" id="content-area">
+                <div id="content-home" class="active">
+                    <div class="start-content">
+                        <h2>Mohsin Saleem</h2>
+                        <p class="loading-data">Results-driven Shopify Developer with 2 years of experience specializing in building and customizing Shopify
+                        themes, particularly Dawn-based themes. Proven track record of completing 100+ custom Shopify stores,
+                        enhancing user experience, optimizing performance, and ensuring mobile responsiveness. Proficient in
+                        Liquid, HTML, CSS, JavaScript, and integrating third-party apps and APIs. Expertise in Shopify Plus, theme
+                        customization, product data migration, and SEO optimization. Strong ability to collaborate with cross
+                        functional teams and deliver high-quality E-Commerce solutions.</p>
+                    </div>
+                    <div class="ask-about">
+                        <strong>Searchable keywords:</strong>
+                        <ul class="keyword-list">
+                            <li class="keyword">Experiance,</li>
+                            <li class="keyword">Expertise,</li>
+                            <li class="keyword">Achievements,</li>
+                            <li class="keyword">Education,</li>
+                            <li class="keyword">Languages,</li>
+                            <li class="keyword">Awards</li>
+                        </ul>
+                        <div class="search" style="margin-top:16px;">
+                            <input type="text" id="ask-input" autocomplete="off" placeholder="Type a keyword...">
+                        </div>
+                        <div id="ask-result" style="margin-top:16px;min-height:32px;"></div>
+                        <div class="ask-results">
+                            <div data-keyword="Experiance" id="result-Experiance">
+                                <strong>Professional Experaince</strong>
+                                <div class="inline-flex space-between">
+                                    <div>Freelance</div>
+                                    <div>Aprail 2025 - Present</div>
+                                </div>
+                                <div>
+                                    <ul>
+                                        <li>Started my freelaning journey with a project. Delivered the project with 100% satifaction. Looking farward to more oppertunities to work with.</li>
+                                    </ul>
+                                </div>
+                                <div class="inline-flex space-between">
+                                    <div>Ainsol, sr.Shopify Developer</div>
+                                    <div>Jan 2023 - Mar 2025</div>
+                                </div>
+                                <div>
+                                    <ul>
+                                        <li>Started with drcommoi.de and quickly completed 100+ custom Shopify projects, becoming a vital part of the company's development team.</li>
+                                        <li>Promoted to Senior Shopify Developer within one year, contributing to key milestones that increased company revenue and operational stability.</li>
+                                        <li>Played a critical role in mrinvites.com, a personal company project, by building the entire Shopify store and introducing web-page invitations, boosting overall revenue.</li>
+                                        <li>Helped position the company on a growth trajectory through innovative solutions and streamlined development processes.</li>
+                                    </ul>
+                                </div>
+                                <div class="inline-flex space-between">
+                                    <div>CodeX IT Solutions, Frontend Developer(Intern)</div>
+                                    <div>Aug 2022 - Dec 2022</div>
+                                </div>
+                                <div>
+                                    <ul>
+                                        <li>Led front-end development for the "Signways" project at Codex IT Solutions, designing and building a fully responsive and user-friendly homepage, enhancing user experience and engagement.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div data-keyword="EXPERTISE" id="result-EXPERTISE">
+                                <ul>
+                                    <li>Store Developement.Theme Developement</li>
+                                    <li>Custom Sections</li>
+                                    <li>Snippets & Functions</li>
+                                    <li>Shopify Store 3.0</li>
+                                    <li>Metaobjects & Metafields</li>
+                                </ul>
+                            </div>
+                            <div data-keyword="ACHIEVEMENTS" id="result-ACHIEVEMENTS">
+                                <ul>
+                                    <li><strong>Completed 100+ custom Shopify stores</strong> delivering fully optimized, responsive, and high-conversion eCommerce websites tailored to client specifications.</li>
+                                    <li><strong>Developed 6+ custom Shopify themes (Dawn-based)</strong> from scratch, ensuring seamless integration with Shopify's platform, mobile responsiveness, and performance optimization.</li>
+                                </ul>
+                            </div>
+                            <div data-keyword="EDUCATION" id="result-EDUCATION">
+                                <div class="inline-flex space-between">
+                                    <div><strong>Bachelor of Computer Sciences</strong></div>
+                                    <div><strong>Oct 2017 - Sep 2021</strong></div>
+                                </div>
+                                <div>
+                                    <strong>Institute of Southern Punjab, Multan</strong>
+                                    <ul>
+                                        <li>Relevant coursework in coding and project mangement</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div data-keyword="LANGUAGE" id="result-Languages">
+                                <ul>
+                                    <li>English (B1)</li>
+                                    <li>Urdu (Native)</li>
+                                    <li>Punjabi (Native)</li>
+                                </ul>
+                            </div>
+                            <div data-keyword="AWARDS" id="result-Awards">
+                                <strong>Award</strong><br>
+                                Awarded Employee of the Month three times consecutively and honored as Employee of the Year for exceptional contributions. Successfully completed 100+ custom Shopify stores and developed 6+ custom Dawn-based themes, driving key business results
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="content-about">
+                    <h2>About</h2>
+                    <p class="loading-data">I'm working as a Shopify developer, building and customizing online stores to meet unique business needs.
+                        My work involves not just designing and coding, but also understanding clients' goals and delivering solutions that help their stores perform better..
+                        I started my journey in tech by completing my BS in Computer Science, which gave me a solid foundation in programming and problem-solving.
+                        After graduating, I stepped into the professional world as a frontend developer, where I worked for around three years.
+                        During this time, I gained hands-on experience with different technologies and platforms, including Shopify, and developed a strong understanding of creating user-friendly, visually appealing, and functional websites.
+                        Looking ahead, I'm focusing on expanding my skills into Shopify app development.
+                        I've already started learning the process and have a basic understanding of how apps work.
+                        My goal is to become fully capable of developing custom apps that enhance Shopify store functionality and provide better solutions for merchants.</p>
+                </div>
+                <div id="content-projects">
+                    <h2>Projects</h2>
+                    <div class="project-display">
+                        <div class="pd-inner">
+                            <div class="pd-layout">
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://urnotinvited.com/">
+                                        <img src="/assets/Projects/urnotinvited.png" alt="urnotinvited" width="100%" height="100%">
+                                        <h2>urnotinvited</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://exosweet.com/">
+                                        <img src="/assets/Projects/exosweet.png" alt="exosweet" width="100%" height="100%">
+                                        <h2>ExoSweet</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://lethara.com/">
+                                        <img src="/assets/Projects/lethara.png" alt="lethara" width="100%" height="100%">
+                                        <h2>Lethara</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://mrinvites.com/">
+                                        <img src="/assets/Projects/mrinvites.png" alt="mrinvites" width="100%" height="100%">
+                                        <h2>Mr.Invites</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://www.feelthefun.ca/#">
+                                        <img src="/assets/Projects/hkp-feelthefun.png" alt="hkp-feelthefun" width="100%" height="100%">
+                                        <h2>HKP - Feel The Fun</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://cardkingz.com/">
+                                        <img src="/assets/Projects/cardkingz.png" alt="cardkingz" width="100%" height="100%">
+                                        <h2>CardKingz</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://jikonijoe.com/">
+                                        <img src="/assets/Projects/jokonijoe.png" alt="jokonijoe" width="100%" height="100%">
+                                        <h2>JokoniJoe</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://ledgebay.com/">
+                                        <img src="/assets/Projects/ledgebay.png" alt="ledgebay" width="100%" height="100%">
+                                        <h2>LedgeBay</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://natura3.com/">
+                                        <img src="/assets/Projects/natura3.png" alt="natura3" width="100%" height="100%">
+                                        <h2>Natura3</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://queenbeesnapeaze.com/">
+                                        <img src="/assets/Projects/queenbeesnapease.png" alt="queenbeesnapease" width="100%" height="100%">
+                                        <h2>QueenBeeSnapeEase</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://risecouture.es/">
+                                        <img src="/assets/Projects/risecouture.png" alt="risecouture" width="100%" height="100%">
+                                        <h2>Rise Couture</h2>
+                                    </a>
+                                </div>
+                                <div class="pd-project-layout">
+                                    <a class="pd-project" href="https://thedolphinstudio.com/">
+                                        <img src="/assets/Projects/thedoplhinestudio.png" alt="thedoplhinestudio" width="100%" height="100%">
+                                        <h2>The Dolphine Studio</h2>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="/main.js"></script>
+</body>
+
+</html>
